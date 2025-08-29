@@ -1,6 +1,117 @@
 {
-    "users": [],
-    "shoppingLists": [],
-    "items": [],
-    "categories": []
+  "users": [
+    {
+      "id": "1",
+      "name": "John",
+      "surname": "Doe",
+      "email": "john.doe@example.com",
+      "cellNumber": "+1234567890",
+      "password": "$2a$12$r3t5u7x9z1b3d5f7h9j1l3n5p7r9t1u3w5y7z1b3d5f7h9j1l3n5p7r9t1u",
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "profileImage": "",
+      "notificationsEnabled": true,
+      "darkMode": false,
+      "emailNotifications": true,
+      "phone": "+1234567890",
+      "address": "123 Main St, City, Country",
+      "lastLogin": "2024-01-20T14:25:00.000Z"
+    },
+    {
+      "id": "1756412304918",
+      "name": "James",
+      "surname": "last",
+      "cellNumber": "+1234567880",
+      "email": "user1@example.com",
+      "password": "$2b$12$UOgaX0YjhCLeveJXKJmjBeeiVDLzkldEJTEgn.wMOTs2l4Q2.irc6",
+      "createdAt": "2025-08-28T20:18:24.919Z",
+      "profileImage": "",
+      "notificationsEnabled": true,
+      "darkMode": false,
+      "emailNotifications": true,
+      "phone": "+1234567880",
+      "address": "",
+      "lastLogin": "2025-08-28T20:18:24.919Z"
+    }
+  ],
+  "shoppingLists": [
+    {
+      "id": "1",
+      "userId": "1",
+      "name": "Weekly Groceries",
+      "completed": false,
+      "category": "Groceries",
+      "quantity": 1,
+      "notes": "Weekly shopping list",
+      "images": [],
+      "createdAt": "2024-01-18T09:15:00.000Z",
+      "updatedAt": "2024-01-18T09:15:00.000Z"
+    }
+  ],
+  "shoppingListItems": [
+    {
+      "id": "1",
+      "shoppingListId": "1",
+      "name": "Milk",
+      "quantity": 2,
+      "category": "Dairy",
+      "completed": false,
+      "notes": "2% milk",
+      "createdAt": "2024-01-18T09:20:00.000Z"
+    },
+    {
+      "id": "2",
+      "shoppingListId": "1",
+      "name": "Bread",
+      "quantity": 2,
+      "category": "Bakery",
+      "completed": false,
+      "notes": "Whole wheat",
+      "createdAt": "2024-01-18T09:21:00.000Z"
+    },
+    {
+      "id": "3",
+      "shoppingListId": "1",
+      "name": "Eggs",
+      "quantity": 12,
+      "category": "Dairy",
+      "completed": false,
+      "notes": "Large eggs",
+      "createdAt": "2024-01-18T09:22:00.000Z"
+    },
+    {
+      "name": "Chease",
+      "category": "Groceries",
+      "quantity": 1,
+      "notes": "",
+      "shoppingListId": "1",
+      "completed": false,
+      "createdAt": "2025-08-29T13:21:43.441Z",
+      "id": "UWKZ0Ek"
+    }
+  ],
+  "categories": [
+    {
+      "id": "1",
+      "name": "Groceries",
+      "userId": "1"
+    },
+    {
+      "id": "2",
+      "name": "Electronics",
+      "userId": "1"
+    },
+    {
+      "id": "3",
+      "name": "Clothing",
+      "userId": "1"
+    }
+  ],
+  "favorites": [
+    {
+      "id": "1",
+      "userId": "1",
+      "shoppingListId": "1",
+      "createdAt": "2024-01-19T11:20:00.000Z"
+    }
+  ]
 }
