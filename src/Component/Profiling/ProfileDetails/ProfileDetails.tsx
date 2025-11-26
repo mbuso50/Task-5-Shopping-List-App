@@ -1,9 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ProfileSectionProps } from '../../types/Types';
 
 const ProfileDetails: React.FC<ProfileSectionProps> = ({ profile, onUpdateProfile }) => {
-    const handleInputChange = (field: keyof typeof profile, value: string) => {
-        onUpdateProfile({ [field]: value });
+    const [formData, setFormData] = useState({
+        name: profile.name || '',
+        surname: profile.surname || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        cellNumber: profile.cellNumber || ''
+    });
+
+    const handleInputChange = (field: string, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleSave = () => {
+        onUpdateProfile(formData);
     };
 
     // Safe date formatting function
@@ -21,14 +37,27 @@ const ProfileDetails: React.FC<ProfileSectionProps> = ({ profile, onUpdateProfil
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label className="block text-sm font-medium text-[#5409DA] mb-2">
-                        Full Name
+                        First Name
                     </label>
                     <input
                         type="text"
-                        value={profile.name}
+                        value={formData.name}
                         onChange={(e) => handleInputChange('name', e.target.value)}
                         className="w-full px-4 py-3 border border-[#8DD8FF] rounded-lg focus:ring-2 focus:ring-[#5409DA] focus:border-transparent"
-                        placeholder="Enter your name"
+                        placeholder="Enter your first name"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-[#5409DA] mb-2">
+                        Last Name
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.surname || ''}
+                        onChange={(e) => handleInputChange('surname', e.target.value)}
+                        className="w-full px-4 py-3 border border-[#8DD8FF] rounded-lg focus:ring-2 focus:ring-[#5409DA] focus:border-transparent"
+                        placeholder="Enter your last name"
                     />
                 </div>
 
@@ -38,7 +67,7 @@ const ProfileDetails: React.FC<ProfileSectionProps> = ({ profile, onUpdateProfil
                     </label>
                     <input
                         type="email"
-                        value={profile.email}
+                        value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
                         className="w-full px-4 py-3 border border-[#8DD8FF] rounded-lg focus:ring-2 focus:ring-[#5409DA] focus:border-transparent"
                         placeholder="Enter your email"
@@ -51,25 +80,34 @@ const ProfileDetails: React.FC<ProfileSectionProps> = ({ profile, onUpdateProfil
                     </label>
                     <input
                         type="tel"
-                        value={profile.phone || ''}
+                        value={formData.phone || formData.cellNumber || ''}
                         onChange={(e) => handleInputChange('phone', e.target.value)}
                         className="w-full px-4 py-3 border border-[#8DD8FF] rounded-lg focus:ring-2 focus:ring-[#5409DA] focus:border-transparent"
                         placeholder="Enter your phone number"
                     />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-[#5409DA] mb-2">
                         Address
                     </label>
                     <input
                         type="text"
-                        value={profile.address || ''}
+                        value={formData.address || ''}
                         onChange={(e) => handleInputChange('address', e.target.value)}
                         className="w-full px-4 py-3 border border-[#8DD8FF] rounded-lg focus:ring-2 focus:ring-[#5409DA] focus:border-transparent"
                         placeholder="Enter your address"
                     />
                 </div>
+            </div>
+
+            <div className="flex justify-end">
+                <button
+                    onClick={handleSave}
+                    className="bg-[#5409DA] text-white px-6 py-3 rounded-lg hover:bg-[#4507B5] transition-colors"
+                >
+                    Save Changes
+                </button>
             </div>
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -78,7 +116,7 @@ const ProfileDetails: React.FC<ProfileSectionProps> = ({ profile, onUpdateProfil
                         <span className="text-white text-sm">✓</span>
                     </div>
                     <p className="text-green-700 text-sm">
-                        Your changes are automatically saved to localStorage.
+                        Your changes will be saved to the server.
                     </p>
                 </div>
             </div>

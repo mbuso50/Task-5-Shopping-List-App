@@ -1,24 +1,18 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
-// Use require for CommonJS packages
 const jsonServer = require('json-server');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-import path from 'path';
-import { fileURLToPath } from 'url';
+const path = require('path');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+console.log('Starting Complete CommonJS server...');
 
 const server = jsonServer.create();
 const router = jsonServer.router(path.join(__dirname, 'db.json'));
 const middlewares = jsonServer.defaults();
 
-const JWT_SECRET = 'your-secret-key-here-change-in-production';
+console.log('Server instances created');
 
-// Enable CORS
+const JWT_SECRET = 'your-secret-key-here-change-in-production';
 server.use(cors({
     origin: 'http://localhost:3000',
     credentials: true
@@ -27,29 +21,37 @@ server.use(cors({
 server.use(middlewares);
 server.use(jsonServer.bodyParser);
 
-// Auth routes
+console.log('Middlewares applied');
+
+// Health check endpoint
+server.get('/api/health', (req, res) => {
+    console.log('Health check received');
+    res.json({
+        status: 'OK',
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+        server: 'Complete CommonJS'
+    });
+});
+
+// User Registration
 server.post('/api/auth/register', async (req, res) => {
     try {
+        console.log('Registration attempt:', req.body);
         const { name, surname, cellNumber, email, password } = req.body;
-
-        console.log('Registration attempt:', { name, surname, cellNumber, email });
-
         if (!name || !surname || !cellNumber || !email || !password) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
         const db = router.db;
-
-        // Check if user already exists
         const existingUser = db.get('users').find({ email }).value();
         if (existingUser) {
+            console.log('User already exists:', email);
             return res.status(400).json({ error: 'User already exists' });
         }
-
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Create new user with all fields
+        // Create new user
         const newUser = {
             id: Date.now().toString(),
             name,
@@ -66,11 +68,7 @@ server.post('/api/auth/register', async (req, res) => {
             address: "",
             lastLogin: new Date().toISOString()
         };
-
-        // Save user to database
         db.get('users').push(newUser).write();
-
-        // Generate JWT token
         const token = jwt.sign({ userId: newUser.id, email: newUser.email }, JWT_SECRET, {
             expiresIn: '24h'
         });
@@ -88,17 +86,18 @@ server.post('/api/auth/register', async (req, res) => {
                 email: newUser.email
             }
         });
+
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
 });
 
+// User Login
 server.post('/api/auth/login', async (req, res) => {
     try {
+        console.log('Login attempt:', req.body);
         const { email, password } = req.body;
-
-        console.log('Login attempt:', { email });
 
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required' });
@@ -112,11 +111,13 @@ server.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
+        // Verify password
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
             console.log('Invalid password for:', email);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+        db.get('users').find({ email }).assign({ lastLogin: new Date().toISOString() }).write();
 
         const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
             expiresIn: '24h'
@@ -137,11 +138,9 @@ server.post('/api/auth/login', async (req, res) => {
         });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
 });
-
-// Protected profile route
 server.get('/api/profile', (req, res) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -161,8 +160,6 @@ server.get('/api/profile', (req, res) => {
         if (!userData) {
             return res.status(404).json({ error: 'User not found' });
         }
-
-        // Return user data without password
         res.json({
             user: {
                 id: userData.id,
@@ -175,20 +172,36 @@ server.get('/api/profile', (req, res) => {
         });
     });
 });
-
-// Health check endpoint
-server.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Server is running', timestamp: new Date().toISOString() });
-});
-
-// Use json-server routes
 server.use('/api', router);
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-    console.log(`✅ Server is running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`👤 Register: http://localhost:${PORT}/api/auth/register`);
-    console.log(`🔐 Login: http://localhost:${PORT}/api/auth/login`);
-    console.log(`👥 Users API: http://localhost:${PORT}/api/users`);
+server.on('error', (error) => {
+    console.error('Server error:', error);
 });
+
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+console.log('Starting server listen on port', PORT);
+
+const httpServer = server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is ACTUALLY RUNNING on port ${PORT}`);
+    console.log(`Health: curl http://localhost:${PORT}/api/health`);
+    console.log(`Register: curl -X POST http://localhost:${PORT}/api/auth/register`);
+    console.log(`Login: curl -X POST http://localhost:${PORT}/api/auth/login`);
+    console.log(`Server started at: ${new Date().toISOString()}`);
+});
+process.on('SIGINT', () => {
+    console.log('Shutting down server gracefully...');
+    httpServer.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+    });
+});
+
+console.log('Server process should stay running...');

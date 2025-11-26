@@ -1,5 +1,4 @@
-
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './Component/store';
 import HomePage from './Component/pages/Home-page';
@@ -10,6 +9,9 @@ import CategoriesPage from './Component/pages/Categories-page';
 import FavoritesPage from './Component/pages/Favorites-page';
 import AboutPage from './Component/pages/About-page';
 import ContactPage from './Component/pages/Contact-page';
+import ProfilePage from './Component/pages/Profile-page';
+import SharedListPage from './Component/pages/Shopping-page';
+import NotFoundPage from './Component/pages/404';
 import ProtectedRoute from './Component/ProtectedRoute/ProtectedRoute';
 import './App.css';
 
@@ -24,6 +26,7 @@ function App() {
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/shared-list/:listId" element={<SharedListPage />} />
 
             {/* Protected Routes */}
             <Route
@@ -58,9 +61,17 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
 
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
       </Router>

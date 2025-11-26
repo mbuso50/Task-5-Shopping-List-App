@@ -1,4 +1,3 @@
-// src/Component/Shopping-list/Shopping-list.tsx
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import {
@@ -10,10 +9,15 @@ import {
     clearCompletedLocal,
     toggleItemLocal,
     updateItemQuantityLocal,
-    clearError
+    clearError,
+    clearFilters
 } from '../slices/shoppingListSlice';
 import Button from '../Button/Button';
 import type { ShoppingItem, CreateShoppingListItemDto } from '../types/Types';
+import EditItem from './EditItem';
+import SearchBar from '../slices/SearchBar';
+import FilterSortControls from './FilterSort';
+import ShareModal from './ShareModal';
 
 interface ShoppingListProps {
     onBackToDemo?: () => void;
@@ -22,11 +26,18 @@ interface ShoppingListProps {
 
 const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList }) => {
     const dispatch = useAppDispatch();
-    const { items, isLoading, error } = useAppSelector((state) => state.shoppingLists);
+    const { items, isLoading, error, filters } = useAppSelector((state) => state.shoppingLists);
     const [newItemName, setNewItemName] = useState('');
     const [newItemCategory, setNewItemCategory] = useState('');
     const [newItemQuantity, setNewItemQuantity] = useState(1);
     const [showError, setShowError] = useState(false);
+
+    // EDIT FUNCTIONALITY STATE
+    const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // SHARING FUNCTIONALITY STATE
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
     const categories = ['Groceries', 'Household', 'Electronics', 'Clothing', 'Other'];
 
@@ -34,6 +45,67 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList })
         // Load items for the default list (ID: 1)
         dispatch(loadShoppingListItems('1'));
     }, [dispatch]);
+
+    // Filter and sort items
+    const filteredAndSortedItems = items
+        .filter(item => {
+            // Search filter
+            const matchesSearch = !filters.searchTerm ||
+                item.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                item.category.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                (item.notes && item.notes.toLowerCase().includes(filters.searchTerm.toLowerCase()));
+
+            // Category filter
+            const matchesCategory = filters.categoryFilter === 'all' || item.category === filters.categoryFilter;
+
+            return matchesSearch && matchesCategory;
+        })
+        .sort((a, b) => {
+            switch (filters.sortBy) {
+                case 'name-asc':
+                    return a.name.localeCompare(b.name);
+                case 'name-desc':
+                    return b.name.localeCompare(a.name);
+                case 'category-asc':
+                    return a.category.localeCompare(b.category);
+                case 'date-desc':
+                    return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+                case 'date-asc':
+                    return new Date(a.createdAt || '').getTime() - new Date(b.createdAt || '').getTime();
+                default:
+                    return 0;
+            }
+        });
+
+    // Group filtered items by category
+    const groupedItems = filteredAndSortedItems.reduce((acc: Record<string, ShoppingItem[]>, item: ShoppingItem) => {
+        const category = item.category || 'Other';
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push(item);
+        return acc;
+    }, {} as Record<string, ShoppingItem[]>);
+
+    // EDIT FUNCTIONS
+    const handleEditItem = (item: ShoppingItem) => {
+        setEditingItem(item);
+        setIsEditModalOpen(true);
+    };
+
+    const handleCloseEditModal = () => {
+        setIsEditModalOpen(false);
+        setEditingItem(null);
+    };
+
+    // SHARING FUNCTIONS
+    const handleShareList = () => {
+        setIsShareModalOpen(true);
+    };
+
+    const handleCloseShareModal = () => {
+        setIsShareModalOpen(false);
+    };
 
     useEffect(() => {
         if (error) {
@@ -95,16 +167,6 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList })
         dispatch(clearError());
     };
 
-    // Group items by category
-    const groupedItems = items.reduce((acc: Record<string, ShoppingItem[]>, item: ShoppingItem) => {
-        const category = item.category || 'Other';
-        if (!acc[category]) {
-            acc[category] = [];
-        }
-        acc[category].push(item);
-        return acc;
-    }, {} as Record<string, ShoppingItem[]>);
-
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#BBFBFF] via-[#8DD8FF] to-[#4E71FF]">
@@ -136,10 +198,19 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList })
                         <div>
                             <h1 className="text-3xl font-bold text-[#5409DA] mb-2">My Shopping List</h1>
                             <p className="text-[#4E71FF]">
-                                {items.length} item{items.length !== 1 ? 's' : ''} in your list
+                                {filteredAndSortedItems.length} of {items.length} item{items.length !== 1 ? 's' : ''} shown
+                                {filters.searchTerm && ` - searching for "${filters.searchTerm}"`}
                             </p>
                         </div>
                         <div className="flex gap-2">
+                            {/* SHARE BUTTON */}
+                            <Button
+                                onClick={handleShareList}
+                                variant="primary"
+                                button_size="medium"
+                            >
+                                Share List
+                            </Button>
                             {onBackToDemo && (
                                 <Button
                                     onClick={onBackToDemo}
@@ -202,6 +273,10 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList })
                     </div>
                 </div>
 
+                {/* Search and Filter Controls */}
+                <SearchBar />
+                <FilterSortControls />
+
                 {/* Shopping List Items */}
                 <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-xl">
                     <div className="flex justify-between items-center mb-4">
@@ -219,7 +294,19 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList })
 
                     {Object.keys(groupedItems).length === 0 ? (
                         <div className="text-center py-8 text-[#4E71FF]">
-                            <p>Your shopping list is empty. Add some items to get started!</p>
+                            {items.length === 0 ? (
+                                <p>Your shopping list is empty. Add some items to get started!</p>
+                            ) : (
+                                <div>
+                                    <p>No items found matching your search criteria.</p>
+                                    <button
+                                        onClick={() => dispatch(clearFilters())}
+                                        className="mt-2 px-4 py-2 text-sm text-[#4E71FF] hover:text-[#5409DA] border border-[#8DD8FF] rounded-lg hover:border-[#5409DA] transition-colors"
+                                    >
+                                        Clear filters
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-6">
@@ -267,6 +354,15 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList })
                                                             +
                                                         </button>
                                                     </div>
+                                                    {/* EDIT BUTTON */}
+                                                    <Button
+                                                        onClick={() => handleEditItem(item)}
+                                                        variant="secondary"
+                                                        button_size="small"
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                    >
+                                                        Edit
+                                                    </Button>
                                                     <Button
                                                         onClick={() => handleRemoveItem(item.id)}
                                                         variant="tertiary"
@@ -284,6 +380,22 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ onBackToDemo, onSaveList })
                         </div>
                     )}
                 </div>
+
+                {/* EDIT MODAL */}
+                <EditItem
+                    item={editingItem}
+                    isOpen={isEditModalOpen}
+                    onClose={handleCloseEditModal}
+                    categories={categories}
+                />
+
+                <ShareModal
+                    isOpen={isShareModalOpen}
+                    onClose={handleCloseShareModal}
+                    listName="My Shopping List"
+                    listId="1"
+                    items={items}
+                />
             </div>
         </div>
     );

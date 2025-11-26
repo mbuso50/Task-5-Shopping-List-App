@@ -150,6 +150,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         </>
                     )}
                 </div>
+
             </nav>
 
             {mobileMenuOpen && (

@@ -1,247 +1,180 @@
+import axiosInstance from './axiosConfig';
 import type { ShoppingItem, CreateShoppingListItemDto } from '../types/Types';
+import type { AxiosError } from 'axios';
+const getCurrentUser = () => {
+    try {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+            console.warn(' No user found in localStorage');
+            return null;
+        }
+        const user = JSON.parse(userStr);
+        console.log(' Current user:', user);
+        return user;
+    } catch (error) {
+        console.error(' Error parsing user from localStorage:', error);
+        return null;
+    }
+};
+const getDefaultShoppingList = async (): Promise<string> => {
+    try {
+        const user = getCurrentUser();
+        if (!user || !user.id) {
+            throw new Error('User not authenticated');
+        }
 
-const API_BASE_URL = 'http://localhost:3001/api';
+        const response = await axiosInstance.get(`/api/shoppingLists?userId=${user.id}`);
+        const userLists = response.data;
+
+        if (userLists && userLists.length > 0) {
+            return userLists[0].id;
+        }
+        const newList = {
+            id: Date.now().toString(),
+            userId: user.id,
+            name: "My Shopping List",
+            completed: false,
+            category: "Groceries",
+            quantity: 1,
+            notes: "Default shopping list",
+            images: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        const createResponse = await axiosInstance.post('/api/shoppingLists', newList);
+        return createResponse.data.id;
+    } catch (error) {
+        console.error(' Error getting default shopping list:', error);
+        throw new Error('Failed to get shopping list');
+    }
+};
 
 export const fetchShoppingLists = async (): Promise<ShoppingItem[]> => {
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-
-    if (!token) {
-        throw new Error('Authentication token not found');
-    }
-
     try {
-        // First, try to get the user's shopping lists
-        const listsResponse = await fetch(`${API_BASE_URL}/shoppingLists?userId=${user.id}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        if (!listsResponse.ok) {
-            throw new Error(`Failed to fetch shopping lists: ${listsResponse.status} ${listsResponse.statusText}`);
+        const user = getCurrentUser();
+        if (!user || !user.id) {
+            throw new Error('User not authenticated');
         }
 
-        const lists = await listsResponse.json();
-
-        // If no lists found, create a default one
-        if (lists.length === 0) {
-            const defaultList = {
-                userId: user.id,
-                name: "My Shopping List",
-                createdAt: new Date().toISOString()
-            };
-
-            const createListResponse = await fetch(`${API_BASE_URL}/shoppingLists`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(defaultList),
-            });
-
-            if (!createListResponse.ok) {
-                throw new Error('Failed to create default shopping list');
-            }
-
-            const newList = await createListResponse.json();
-            return [newList];
-        }
-
-        return lists;
+        const response = await axiosInstance.get<ShoppingItem[]>(`/api/shoppingLists?userId=${user.id}`);
+        return response.data;
     } catch (error) {
-        console.error('Error fetching shopping lists:', error);
-        throw error;
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to fetch shopping lists';
+        throw new Error(errorMessage);
     }
 };
 
 export const fetchShoppingListItems = async (listId: string): Promise<ShoppingItem[]> => {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-        throw new Error('Authentication token not found');
-    }
-
     try {
-        console.log('Fetching shopping list items for list ID:', listId);
-
-        // Try the main endpoint - your db.json shows shoppingListItems array
-        const response = await fetch(`${API_BASE_URL}/shoppingListItems?shoppingListId=${listId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        console.log('Response status:', response.status);
-
-        if (!response.ok) {
-            // If shoppingListItems endpoint doesn't work, try getting items from the list itself
-            const listResponse = await fetch(`${API_BASE_URL}/shoppingLists/${listId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (!listResponse.ok) {
-                throw new Error(`Failed to fetch shopping list items: ${response.status} ${response.statusText}`);
-            }
-
-            const list = await listResponse.json();
-            // If the list has items embedded, return them
-            return list.items || [];
-        }
-
-        const data = await response.json();
-        console.log('Fetched items:', data);
-        return data;
+        const response = await axiosInstance.get<ShoppingItem[]>(`/api/shoppingListItems?shoppingListId=${listId}`);
+        return response.data;
     } catch (error) {
-        console.error('Error fetching shopping list items:', error);
-        throw error;
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to fetch shopping list items';
+        throw new Error(errorMessage);
     }
 };
 
 export const createShoppingListItem = async (itemData: CreateShoppingListItemDto): Promise<ShoppingItem> => {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-        throw new Error('Authentication token not found');
-    }
-
     try {
-        // First try the shoppingListItems endpoint
-        const response = await fetch(`${API_BASE_URL}/shoppingListItems`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-                ...itemData,
-                shoppingListId: '1', // Default list ID for now
-                completed: false,
-                createdAt: new Date().toISOString(),
-            }),
-        });
-
-        // If shoppingListItems endpoint doesn't exist (404), try adding to the list directly
-        if (response.status === 404) {
-            console.log('shoppingListItems endpoint not found, trying alternative approach');
-
-            // Get the current list
-            const listResponse = await fetch(`${API_BASE_URL}/shoppingLists/1`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (!listResponse.ok) {
-                throw new Error('Failed to fetch shopping list');
-            }
-
-            const list = await listResponse.json();
-
-            // Create new item with shoppingListId
-            const newItem: ShoppingItem = {
-                ...itemData,
-                id: Date.now().toString(),
-                shoppingListId: '1', // Add the missing shoppingListId
-                completed: false,
-                createdAt: new Date().toISOString(),
-            };
-
-            // Update the list with the new item
-            const updatedList = {
-                ...list,
-                items: [...(list.items || []), newItem]
-            };
-
-            const updateResponse = await fetch(`${API_BASE_URL}/shoppingLists/1`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(updatedList),
-            });
-
-            if (!updateResponse.ok) {
-                throw new Error(`Failed to create shopping list item: ${updateResponse.status} ${updateResponse.statusText}`);
-            }
-
-            return newItem;
-        } else if (!response.ok) {
-            throw new Error(`Failed to create shopping list item: ${response.status} ${response.statusText}`);
+        const user = getCurrentUser();
+        if (!user || !user.id) {
+            throw new Error('User not authenticated');
         }
 
-        return response.json();
+        const listId = await getDefaultShoppingList();
+
+        const newItem: ShoppingItem = {
+            ...itemData,
+            id: Date.now().toString(),
+            shoppingListId: listId,
+            userId: user.id,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+
+        const response = await axiosInstance.post<ShoppingItem>('/api/shoppingListItems', newItem);
+        return response.data;
     } catch (error) {
-        console.error('Error creating shopping list item:', error);
-        throw error;
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to create shopping list item';
+        throw new Error(errorMessage);
     }
 };
 
 export const updateShoppingListItem = async (id: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> => {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-        throw new Error('Authentication token not found');
-    }
-
     try {
-        const response = await fetch(`${API_BASE_URL}/shoppingListItems/${id}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify(updates),
+        const response = await axiosInstance.patch<ShoppingItem>(`/api/shoppingListItems/${id}`, {
+            ...updates,
+            updatedAt: new Date().toISOString(),
         });
-
-        // Fallback if shoppingListItems endpoint doesn't exist
-        if (response.status === 404) {
-            // Implement fallback logic similar to createShoppingListItem
-            console.log('Update fallback not implemented yet');
-            throw new Error('shoppingListItems endpoint not available');
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to update shopping list item: ${response.status} ${response.statusText}`);
-        }
-
-        return response.json();
+        return response.data;
     } catch (error) {
-        console.error('Error updating shopping list item:', error);
-        throw error;
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to update shopping list item';
+        throw new Error(errorMessage);
     }
 };
 
 export const deleteShoppingListItem = async (id: string): Promise<void> => {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-        throw new Error('Authentication token not found');
-    }
-
     try {
-        const response = await fetch(`${API_BASE_URL}/shoppingListItems/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        // Fallback if shoppingListItems endpoint doesn't exist
-        if (response.status === 404) {
-            console.log('Delete fallback not implemented yet');
-            throw new Error('shoppingListItems endpoint not available');
-        }
-
-        if (!response.ok) {
-            throw new Error(`Failed to delete shopping list item: ${response.status} ${response.statusText}`);
-        }
+        await axiosInstance.delete(`/api/shoppingListItems/${id}`);
     } catch (error) {
-        console.error('Error deleting shopping list item:', error);
-        throw error;
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to delete shopping list item';
+        throw new Error(errorMessage);
+    }
+};
+export const searchShoppingListItems = async (searchTerm: string, listId: string): Promise<ShoppingItem[]> => {
+    try {
+        const allItems = await fetchShoppingListItems(listId);
+        return allItems.filter(item =>
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.notes && item.notes.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    } catch (error) {
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to search shopping list items';
+        throw new Error(errorMessage);
+    }
+};
+
+export const filterShoppingListItems = async (category: string, listId: string): Promise<ShoppingItem[]> => {
+    try {
+        const allItems = await fetchShoppingListItems(listId);
+        if (!category || category === 'all') {
+            return allItems;
+        }
+        return allItems.filter(item => item.category === category);
+    } catch (error) {
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to filter shopping list items';
+        throw new Error(errorMessage);
+    }
+};
+
+export const sortShoppingListItems = async (sortBy: 'name' | 'category' | 'date', listId: string): Promise<ShoppingItem[]> => {
+    try {
+        const allItems = await fetchShoppingListItems(listId);
+        return [...allItems].sort((a, b) => {
+            switch (sortBy) {
+                case 'name':
+                    return a.name.localeCompare(b.name);
+                case 'category':
+                    return a.category.localeCompare(b.category);
+                case 'date':
+                    return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+                default:
+                    return 0;
+            }
+        });
+    } catch (error) {
+        const axiosError = error as AxiosError<{ error?: string }>;
+        const errorMessage = axiosError.response?.data?.error || axiosError.message || 'Failed to sort shopping list items';
+        throw new Error(errorMessage);
     }
 };

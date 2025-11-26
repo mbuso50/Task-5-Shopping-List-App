@@ -31,6 +31,22 @@
       "phone": "+1234567880",
       "address": "",
       "lastLogin": "2025-08-28T20:18:24.919Z"
+    },
+    {
+      "id": "1764185287628",
+      "name": "James",
+      "surname": "last",
+      "cellNumber": "+1234567880",
+      "email": "user2@example.com",
+      "password": "$2b$12$2pKVn6gcJXyvzraFMU7yXOJK8KunbFuaONjdEOyYHEENGCD/qDK1a",
+      "createdAt": "2025-11-26T19:28:07.628Z",
+      "profileImage": "",
+      "notificationsEnabled": true,
+      "darkMode": false,
+      "emailNotifications": true,
+      "phone": "+1234567880",
+      "address": "",
+      "lastLogin": "2025-11-26T20:04:44.599Z"
     }
   ],
   "shoppingLists": [
@@ -45,6 +61,18 @@
       "images": [],
       "createdAt": "2024-01-18T09:15:00.000Z",
       "updatedAt": "2024-01-18T09:15:00.000Z"
+    },
+    {
+      "id": "1764187494672",
+      "userId": "1764185287628",
+      "name": "My Shopping List",
+      "completed": false,
+      "category": "Groceries",
+      "quantity": 1,
+      "notes": "Default shopping list",
+      "images": [],
+      "createdAt": "2025-11-26T20:04:54.672Z",
+      "updatedAt": "2025-11-26T20:04:54.672Z"
     }
   ],
   "shoppingListItems": [
@@ -54,39 +82,10 @@
       "name": "Milk",
       "quantity": 2,
       "category": "Dairy",
-      "completed": false,
+      "completed": true,
       "notes": "2% milk",
-      "createdAt": "2024-01-18T09:20:00.000Z"
-    },
-    {
-      "id": "2",
-      "shoppingListId": "1",
-      "name": "Bread",
-      "quantity": 2,
-      "category": "Bakery",
-      "completed": false,
-      "notes": "Whole wheat",
-      "createdAt": "2024-01-18T09:21:00.000Z"
-    },
-    {
-      "id": "3",
-      "shoppingListId": "1",
-      "name": "Eggs",
-      "quantity": 12,
-      "category": "Dairy",
-      "completed": false,
-      "notes": "Large eggs",
-      "createdAt": "2024-01-18T09:22:00.000Z"
-    },
-    {
-      "name": "Chease",
-      "category": "Groceries",
-      "quantity": 1,
-      "notes": "",
-      "shoppingListId": "1",
-      "completed": false,
-      "createdAt": "2025-08-29T13:21:43.441Z",
-      "id": "UWKZ0Ek"
+      "createdAt": "2024-01-18T09:20:00.000Z",
+      "updatedAt": "2025-11-26T20:05:15.702Z"
     }
   ],
   "categories": [

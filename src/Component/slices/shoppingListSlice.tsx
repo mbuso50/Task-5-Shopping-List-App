@@ -12,12 +12,22 @@ interface ShoppingListState {
     items: ShoppingItem[];
     isLoading: boolean;
     error: string | null;
+    filters: {
+        searchTerm: string;
+        categoryFilter: string;
+        sortBy: string;
+    };
 }
 
 const initialState: ShoppingListState = {
     items: [],
     isLoading: false,
     error: null,
+    filters: {
+        searchTerm: '',
+        categoryFilter: 'all',
+        sortBy: 'name-asc'
+    },
 };
 
 export const loadShoppingListItems = createAsyncThunk(
@@ -59,11 +69,23 @@ export const updateItemQuantity = createAsyncThunk(
     }
 );
 
+export const updateShoppingItem = createAsyncThunk(
+    'shoppingLists/updateItem',
+    async ({ id, updates }: { id: string; updates: Partial<ShoppingItem> }, { rejectWithValue }) => {
+        try {
+            const response = await updateShoppingListItem(id, updates);
+            return response;
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update item';
+            return rejectWithValue(errorMessage);
+        }
+    }
+);
+
 export const toggleItemCompleted = createAsyncThunk(
     'shoppingLists/toggleCompleted',
     async (id: string, { rejectWithValue }) => {
         try {
-            // First get the current item to toggle the completed status
             const items = await fetchShoppingListItems('1'); // Default list ID
             const item = items.find(item => item.id === id);
 
@@ -100,7 +122,6 @@ const shoppingListSlice = createSlice({
         clearError: (state) => {
             state.error = null;
         },
-        // Local state updates for immediate UI feedback
         toggleItemLocal: (state, action: PayloadAction<string>) => {
             const item = state.items.find(item => item.id === action.payload);
             if (item) {
@@ -113,13 +134,34 @@ const shoppingListSlice = createSlice({
                 item.quantity = action.payload.quantity;
             }
         },
+        updateItemLocal: (state, action: PayloadAction<{ id: string; updates: Partial<ShoppingItem> }>) => {
+            const item = state.items.find(item => item.id === action.payload.id);
+            if (item) {
+                Object.assign(item, action.payload.updates);
+            }
+        },
         clearCompletedLocal: (state) => {
             state.items = state.items.filter(item => !item.completed);
+        },
+        setSearchTerm: (state, action: PayloadAction<string>) => {
+            state.filters.searchTerm = action.payload;
+        },
+        setCategoryFilter: (state, action: PayloadAction<string>) => {
+            state.filters.categoryFilter = action.payload;
+        },
+        setSortBy: (state, action: PayloadAction<string>) => {
+            state.filters.sortBy = action.payload;
+        },
+        clearFilters: (state) => {
+            state.filters = {
+                searchTerm: '',
+                categoryFilter: 'all',
+                sortBy: 'name-asc'
+            };
         },
     },
     extraReducers: (builder) => {
         builder
-            // Load items
             .addCase(loadShoppingListItems.pending, (state) => {
                 state.isLoading = true;
                 state.error = null;
@@ -132,33 +174,48 @@ const shoppingListSlice = createSlice({
                 state.isLoading = false;
                 state.error = action.payload as string;
             })
-            // Add item
             .addCase(addShoppingItem.fulfilled, (state, action: PayloadAction<ShoppingItem>) => {
                 state.items.push(action.payload);
             })
             .addCase(addShoppingItem.rejected, (state, action) => {
                 state.error = action.payload as string;
             })
-            // Update quantity
             .addCase(updateItemQuantity.fulfilled, (state, action: PayloadAction<ShoppingItem>) => {
                 const index = state.items.findIndex(item => item.id === action.payload.id);
                 if (index !== -1) {
                     state.items[index] = action.payload;
                 }
             })
-            // Toggle completed
+            .addCase(updateShoppingItem.fulfilled, (state, action: PayloadAction<ShoppingItem>) => {
+                const index = state.items.findIndex(item => item.id === action.payload.id);
+                if (index !== -1) {
+                    state.items[index] = action.payload;
+                }
+            })
+            .addCase(updateShoppingItem.rejected, (state, action) => {
+                state.error = action.payload as string;
+            })
             .addCase(toggleItemCompleted.fulfilled, (state, action: PayloadAction<ShoppingItem>) => {
                 const index = state.items.findIndex(item => item.id === action.payload.id);
                 if (index !== -1) {
                     state.items[index] = action.payload;
                 }
             })
-            // Remove item
             .addCase(removeShoppingItem.fulfilled, (state, action: PayloadAction<string>) => {
                 state.items = state.items.filter(item => item.id !== action.payload);
             });
     },
 });
 
-export const { clearError, toggleItemLocal, updateItemQuantityLocal, clearCompletedLocal } = shoppingListSlice.actions;
+export const {
+    clearError,
+    toggleItemLocal,
+    updateItemQuantityLocal,
+    clearCompletedLocal,
+    updateItemLocal,
+    setSearchTerm,
+    setCategoryFilter,
+    setSortBy,
+    clearFilters
+} = shoppingListSlice.actions;
 export default shoppingListSlice.reducer;
